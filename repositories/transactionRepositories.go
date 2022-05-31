@@ -89,9 +89,9 @@ func (txrepo *txrepositories) CreateTX(tx entities.Transaction) (bool, error) {
 		return false, err
 	}
 	tx.FileHash = fh
-	fmt.Println("REPO", tx)
 	// Create Transaction to Propogate on network
-	return txrepo.blkchain.Send(tx.PrivKey, tx.Reciever, tx.Amount, tx.AllowAddress, fh, false), nil
+
+	return txrepo.blkchain.SendProposal(tx.PrivKey, tx.Reciever, tx.Amount, tx.AllowAddress, tx.FileHash), nil
 
 }
 func NewTxRepositories(blkchain cli.CLI) TxRepositories {

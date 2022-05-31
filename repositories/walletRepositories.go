@@ -16,7 +16,9 @@ type walletrepositories struct {
 
 func (w *walletrepositories) CreateWallet() (*entities.Wallet, error) {
 	var wallet entities.Wallet
-	wallet.Address, wallet.PrivKey = w.blkchain.CreateWallet()
+	var pub, priv = w.blkchain.CreateWallet()
+	wallet.PrivKey = string(priv)
+	wallet.Address = string(pub)
 	return &wallet, nil
 }
 

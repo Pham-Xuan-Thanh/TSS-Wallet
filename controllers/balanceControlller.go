@@ -16,6 +16,7 @@ type balancecontroller struct {
 
 type BalanceController interface {
 	GetBalance(ctx *gin.Context)
+	FindIPFSHash(ctx *gin.Context)
 }
 
 func (b *balancecontroller) GetBalance(ctx *gin.Context) {
@@ -24,10 +25,29 @@ func (b *balancecontroller) GetBalance(ctx *gin.Context) {
 	if err != nil {
 		res := helpers.BuildErrorResponse("Invalid Parameter", err.Error(), helpers.EmptyObject{})
 		ctx.JSON(http.StatusBadGateway, res)
+		return
 	} // Bind(&addr)
 	result, err := b.BalanceService.GetBalance(addr)
 	if err != nil {
 		res := helpers.BuildErrorResponse("Invalid Address", err.Error(), helpers.EmptyObject{})
+		ctx.JSON(http.StatusBadGateway, res)
+	} else {
+		response := helpers.BuildResponse(true, "Successfully", result)
+		ctx.JSON(http.StatusOK, response)
+	}
+}
+
+func (b *balancecontroller) FindIPFSHash(ctx *gin.Context) {
+	var ipfsHash dto.IPFSHASH
+	err := ctx.ShouldBind(&ipfsHash)
+	if err != nil {
+		res := helpers.BuildErrorResponse("Invalid Parameter", err.Error(), helpers.EmptyObject{})
+		ctx.JSON(http.StatusBadGateway, res)
+		return
+	}
+	result, err := b.BalanceService.FindIPFSHash(ipfsHash.IPFSHash)
+	if err != nil {
+		res := helpers.BuildErrorResponse("Invalid IPFS hash", err.Error(), helpers.EmptyObject{})
 		ctx.JSON(http.StatusBadGateway, res)
 	} else {
 		response := helpers.BuildResponse(true, "Successfully", result)

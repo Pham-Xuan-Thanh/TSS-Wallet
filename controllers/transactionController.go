@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/dto"
@@ -26,7 +25,6 @@ func (tx *txcontroller) CreateTX(ctx *gin.Context) {
 		return
 	}
 	result, err := tx.TxService.CreateTX(txDto)
-	fmt.Println(txDto)
 	if err != nil {
 		res := helpers.BuildErrorResponse("Invalid paramerter", err.Error(), helpers.EmptyObject{})
 		ctx.JSON(http.StatusBadGateway, res)

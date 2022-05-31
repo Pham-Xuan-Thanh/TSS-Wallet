@@ -12,6 +12,7 @@ type balanceservice struct {
 
 type BalanceService interface {
 	GetBalance(dto.AddressDTO) (*entities.Balance, error)
+	FindIPFSHash(string) (*entities.AllowUsers, error)
 }
 
 func (b *balanceservice) GetBalance(balanceGet dto.AddressDTO) (*entities.Balance, error) {
@@ -23,6 +24,10 @@ func (b *balanceservice) GetBalance(balanceGet dto.AddressDTO) (*entities.Balanc
 	// }
 
 	return b.BalanceRepo.GetBalance(balanceAddr)
+}
+
+func (b *balanceservice) FindIPFSHash(ipfsHash string) (*entities.AllowUsers, error) {
+	return b.BalanceRepo.FindIPFSHash(ipfsHash)
 }
 func NewBalanceService(b repositories.BalanceRepositories) BalanceService {
 	return &balanceservice{b}

@@ -1,7 +1,6 @@
 package services
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/dto"
@@ -24,7 +23,7 @@ func (txser *txservice) CreateTX(txDto dto.TransactionDTO) (bool, error) {
 		return false, err
 	}
 	tx.FilePath = filepath.FromSlash(tx.FilePath)
-	fmt.Println("Ser", tx)
+
 	return txser.TxRepositories.CreateTX(tx)
 }
 func NewTxService(tx repositories.TxRepositories) TxService {

@@ -17,7 +17,11 @@ const (
 )
 
 func main() {
-	godotenv.Load()
+	err := godotenv.Load(".env")
+
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
 
 	//Connect Mysql Database
 	// db, err := utils.ConnectToDatabaseMysql()
@@ -31,7 +35,7 @@ func main() {
 	server := configs.InitServer(blkchaincore)
 	// Miragte db
 	// db.AutoMigrate(entities.Device{})
-	err := server.Start()
+	err = server.Start()
 	if err != nil {
 		log.Fatal("Cannot start server:", err)
 	}

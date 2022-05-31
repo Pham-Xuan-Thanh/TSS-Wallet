@@ -86,6 +86,7 @@ func InitServer(chaincore cli.CLI) *Server {
 	balanceRouter := router.Group("/api/user/balance")
 	{
 		balanceRouter.POST("/", balanceController.GetBalance)
+		balanceRouter.POST("/filehash", balanceController.FindIPFSHash)
 	}
 
 	txReposi := repositories.NewTxRepositories(chaincore)
@@ -116,8 +117,18 @@ func (server *Server) Start() error {
 	if err != nil {
 		return err
 	}
+	isquit := make(chan bool)
+	// server.blkchain.ReindexUTXO()
+	go func(core cli.CLI) {
+		core.StartNode("")
+		if <-isquit {
+			return
+		}
+	}(server.blkchain)
+
 	fmt.Println("IPFS daemon is running.... ")
 	defer func() {
+		isquit <- true
 		fmt.Println("IPFS downed T.T")
 		server.ipfsDaemon.Process.Kill()
 	}()
