@@ -18,6 +18,8 @@ type txrepositories struct {
 
 type TxRepositories interface {
 	CreateTX(entities.Transaction) (bool, error)
+	CreateSendTX(entities.Transaction) (string, error)
+	CreateShareTX(entities.Transaction) (string, error)
 }
 
 type ipfsID struct {
@@ -78,22 +80,32 @@ func ipfsAdd(filepath string) (string, error) {
 	return getFileHash(stdout), nil
 }
 func (txrepo *txrepositories) CreateTX(tx entities.Transaction) (bool, error) {
+
+	// Create Transaction to Propogate on network
+	fmt.Print("What ups")
+	return txrepo.blkchain.Send(tx.PrivKey, tx.Reciever, tx.Amount, false), nil
+}
+func (txrepo *txrepositories) CreateSendTX(tx entities.Transaction) (string, error) {
 	//Check file exist??
 	if isExist, err := fileExists(tx.FilePath); err != nil || !isExist {
-		return isExist, err
+		return "", err
 	}
 
 	// Add file to ipfs
 	fh, err := ipfsAdd(tx.FilePath)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 	tx.FileHash = fh
 	// Create Transaction to Propogate on network
-
-	return txrepo.blkchain.SendProposal(tx.PrivKey, tx.Reciever, tx.Amount, tx.AllowAddress, tx.FileHash), nil
-
+	return txrepo.blkchain.SendProposal(tx.PrivKey, tx.Reciever, tx.Amount, tx.FileHash), nil
 }
+func (txrepo *txrepositories) CreateShareTX(tx entities.Transaction) (string, error) {
+
+	// Create Transaction to Propogate on network
+	return txrepo.blkchain.Share(tx.PrivKey, tx.Reciever, tx.Amount, tx.PubKey2Share, tx.IpfsHashEnc), nil
+}
+
 func NewTxRepositories(blkchain cli.CLI) TxRepositories {
 	return &txrepositories{blkchain: blkchain}
 }

@@ -96,6 +96,8 @@ func InitServer(chaincore cli.CLI) *Server {
 	txRouter := router.Group("/api/user/transaction/create")
 	{
 		txRouter.POST("/", txController.CreateTX)
+		txRouter.POST("/upload", txController.CreateSendTX)
+		txRouter.POST("/share", txController.CreateShareTX)
 	}
 
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
