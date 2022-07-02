@@ -7,7 +7,6 @@ import (
 
 type WalletRepositories interface {
 	CreateWallet() (*entities.Wallet, error)
-	GetAddress(entities.Wallet) (*entities.Address, error)
 }
 
 type walletrepositories struct {
@@ -23,11 +22,11 @@ func (w *walletrepositories) CreateWallet() (*entities.Wallet, error) {
 	return &wallet, nil
 }
 
-func (w *walletrepositories) GetAddress(getAddrwallet entities.Wallet) (*entities.Address, error) {
-	res := entities.Address{}
-	res.Address = string(w.blkchain.AddWallet([]byte(getAddrwallet.PrivKey)))
-	return &res, nil
-}
+// func (w *walletrepositories) GetAddress(getAddrwallet entities.Wallet) (*entities.Address, error) {
+// 	res := entities.Address{}
+// 	res.Address = string(w.blkchain.AddWallet([]byte(getAddrwallet.PrivKey)))
+// 	return &res, nil
+// }
 
 func NewWalletRepository(blkchain cli.CLI) WalletRepositories {
 	return &walletrepositories{blkchain}

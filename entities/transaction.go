@@ -9,3 +9,7 @@ type Transaction struct {
 	IpfsHashEnc  string
 	FileHash     string
 }
+
+type TransactionInputs struct {
+	TXins map[string][][2]int `json:"tx_ins"`
+}

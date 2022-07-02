@@ -20,7 +20,7 @@ import (
 )
 
 type Server struct {
-	blkchain   cli.CLI
+	// blkchain   cli.CLI
 	router     *gin.Engine
 	ipfsDaemon exec.Cmd
 }
@@ -33,7 +33,7 @@ func InitServer(chaincore cli.CLI) *Server {
 	docs.SwaggerInfo.Host = url_docs
 	docs.SwaggerInfo.Schemes = []string{"http"}
 
-	server := &Server{blkchain: chaincore}
+	server := &Server{}
 	router := gin.New()
 
 	// init module
@@ -74,12 +74,12 @@ func InitServer(chaincore cli.CLI) *Server {
 
 	walletRouter := router.Group("/api/user/wallet")
 	{
-		walletRouter.POST("/", walletController.GetAddress)
+		// walletRouter.POST("/", walletController.GetAddress)
 		walletRouter.GET("/", walletController.CreateWallet)
 
 	}
 
-	balanceReposi := repositories.NewBalanceRepository(chaincore)
+	balanceReposi := repositories.NewBalanceRepository()
 	balanceService := services.NewBalanceService(balanceReposi)
 	balanceController := controllers.NewBalanceController(balanceService)
 
@@ -89,15 +89,15 @@ func InitServer(chaincore cli.CLI) *Server {
 		balanceRouter.POST("/filehash", balanceController.FindIPFSHash)
 	}
 
-	txReposi := repositories.NewTxRepositories(chaincore)
+	txReposi := repositories.NewTxRepositories()
 	txService := services.NewTxService(txReposi)
 	txController := controllers.NewTxController(txService)
 
 	txRouter := router.Group("/api/user/transaction/create")
 	{
 		txRouter.POST("/", txController.CreateTX)
-		txRouter.POST("/upload", txController.CreateSendTX)
-		txRouter.POST("/share", txController.CreateShareTX)
+		txRouter.POST("/upload", txController.CreateTXipfs)
+		// txRouter.POST("/share", txController.CreateTXipfs)
 	}
 
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -119,18 +119,18 @@ func (server *Server) Start() error {
 	if err != nil {
 		return err
 	}
-	isquit := make(chan bool)
+	// isquit := make(chan bool)
 	// server.blkchain.ReindexUTXO()
-	go func(core cli.CLI) {
-		core.StartNode("")
-		if <-isquit {
-			return
-		}
-	}(server.blkchain)
+	// go func(core cli.CLI) {
+	// 	core.StartNode("")
+	// 	if <-isquit {
+	// 		return
+	// 	}
+	// }(server.blkchain)
 
 	fmt.Println("IPFS daemon is running.... ")
 	defer func() {
-		isquit <- true
+		// isquit <- true
 		fmt.Println("IPFS downed T.T")
 		server.ipfsDaemon.Process.Kill()
 	}()

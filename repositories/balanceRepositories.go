@@ -1,15 +1,20 @@
 package repositories
 
 import (
+	"bytes"
+	"encoding/gob"
+	"encoding/hex"
 	"fmt"
+	"log"
+	"net"
+	"os"
 	"time"
 
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/entities"
-	"github.com/thanhxeon2470/TSS_chain/cli"
+	"github.com/thanhxeon2470/TSS_chain/rpc"
 )
 
 type balancerepositories struct {
-	blkchain cli.CLI
 }
 
 type BalanceRepositories interface {
@@ -19,7 +24,28 @@ type BalanceRepositories interface {
 
 func (b *balancerepositories) GetBalance(balanceAddr entities.Address) (*entities.Balance, error) {
 	result := entities.NewBalance()
-	var balance, fileInfo = b.blkchain.GetBalance(string(balanceAddr.Address))
+	rpc.SendGetBlance(os.Getenv("SERVER_RPC"), string(balanceAddr.Address))
+	port := os.Getenv("PORT_LSRPC")
+	port = fmt.Sprintf(":%s", port)
+	ln, err := net.Listen("tcp", port)
+	if err != nil {
+		log.Panic(err)
+	}
+	defer ln.Close()
+
+	conn, err := ln.Accept()
+	if err != nil {
+		log.Panic(err)
+	}
+	buff_t := rpc.HandleRPCReceive(conn)
+	var payload rpc.Balance
+	buff := bytes.NewBuffer(buff_t)
+	dec := gob.NewDecoder(buff)
+	err = dec.Decode(&payload)
+	if err != nil {
+		return nil, err
+	}
+	var balance, fileInfo = payload.Value, payload.FTXs
 	result.Balanced = balance
 	for iHash, in4 := range fileInfo {
 		fmt.Printf("=================== %s %t %s", iHash, in4.Author, time.Unix(in4.Exp, 0))
@@ -28,11 +54,36 @@ func (b *balancerepositories) GetBalance(balanceAddr entities.Address) (*entitie
 	return result, nil
 }
 
-func (b *balancerepositories) FindIPFSHash(ipfsHash string) (*entities.AllowUsers, error) {
+func (b *balancerepositories) FindIPFSHash(ipfsHashENC string) (*entities.AllowUsers, error) {
 	result := entities.NewAllowUsers()
+	encBytes, err := hex.DecodeString(ipfsHashENC)
+	if err != nil {
+		return nil, err
+	}
+	rpc.SendFindIPFS(os.Getenv("SERVER_RPC"), encBytes)
+	port := os.Getenv("PORT_LSRPC")
+	port = fmt.Sprintf(":%s", port)
+	ln, err := net.Listen("tcp", port)
+	if err != nil {
+		log.Panic(err)
+	}
+	defer ln.Close()
 
-	resp := b.blkchain.FindIPFS(ipfsHash)
-	fmt.Println("aaaaaaaa", ipfsHash)
+	conn, err := ln.Accept()
+	if err != nil {
+		log.Panic(err)
+	}
+	buff_t := rpc.HandleRPCReceive(conn)
+	var payload rpc.Ipfs
+	buff := bytes.NewBuffer(buff_t)
+	dec := gob.NewDecoder(buff)
+	err = dec.Decode(&payload)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := payload.User
+	fmt.Println("aaaaaaaa", ipfsHashENC)
 	for address, isAuthor := range resp {
 		fmt.Println("CL", address, isAuthor)
 		result.Users[address] = isAuthor
@@ -40,6 +91,6 @@ func (b *balancerepositories) FindIPFSHash(ipfsHash string) (*entities.AllowUser
 	return result, nil
 }
 
-func NewBalanceRepository(blkchain cli.CLI) BalanceRepositories {
-	return &balancerepositories{blkchain}
+func NewBalanceRepository() BalanceRepositories {
+	return &balancerepositories{}
 }

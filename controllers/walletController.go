@@ -4,7 +4,6 @@ import (
 	// "github.com/Pham-Xuan-Thanh/TSS-Wallet/dto"
 	"net/http"
 
-	"github.com/Pham-Xuan-Thanh/TSS-Wallet/dto"
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/helpers"
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/services"
 	"github.com/gin-gonic/gin"
@@ -15,7 +14,7 @@ type walletcontroller struct {
 }
 type WalletController interface {
 	CreateWallet(ctx *gin.Context)
-	GetAddress(ctx *gin.Context)
+	// GetAddress(ctx *gin.Context)
 }
 
 // @BasePath /api/user/wallet
@@ -50,18 +49,18 @@ func (w *walletcontroller) CreateWallet(ctx *gin.Context) {
 // @Failure 400 {object} web.APIError "We need ID!!"
 // @Failure 404 {object} web.APIError "Can not find ID"
 // @Router /testapi/get-string-by-int/{some_id} [get]
-func (w *walletcontroller) GetAddress(ctx *gin.Context) {
-	var privKeyDto dto.PrivateKeyDto
-	ctx.ShouldBind(&privKeyDto)
-	result, err := w.WalletService.GetAddress(privKeyDto)
-	if err != nil {
-		res := helpers.BuildErrorResponse("Invalid Key", err.Error(), helpers.EmptyObject{})
-		ctx.JSON(http.StatusBadGateway, res)
-	} else {
-		response := helpers.BuildResponse(true, "Successfully", result)
-		ctx.JSON(http.StatusOK, response)
-	}
-}
+// func (w *walletcontroller) GetAddress(ctx *gin.Context) {
+// 	var privKeyDto dto.PrivateKeyDto
+// 	ctx.ShouldBind(&privKeyDto)
+// 	result, err := w.WalletService.GetAddress(privKeyDto)
+// 	if err != nil {
+// 		res := helpers.BuildErrorResponse("Invalid Key", err.Error(), helpers.EmptyObject{})
+// 		ctx.JSON(http.StatusBadGateway, res)
+// 	} else {
+// 		response := helpers.BuildResponse(true, "Successfully", result)
+// 		ctx.JSON(http.StatusOK, response)
+// 	}
+// }
 
 func NewWalletController(w services.WalletService) WalletController {
 	return &walletcontroller{w}

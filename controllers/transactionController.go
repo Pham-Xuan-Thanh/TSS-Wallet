@@ -16,13 +16,13 @@ type txcontroller struct {
 
 type TxController interface {
 	CreateTX(ctx *gin.Context)
-	CreateSendTX(ctx *gin.Context)  // Create tx send file
-	CreateShareTX(ctx *gin.Context) // Tx to share file
+	CreateTXipfs(ctx *gin.Context) // Create tx send file
+	// CreateShareTX(ctx *gin.Context) // Tx to share file
 }
 
 func (tx *txcontroller) CreateTX(ctx *gin.Context) {
-	var txDto dto.TransactionDTO
-	if err := ctx.ShouldBind(&txDto); err != nil {
+	var txDto *dto.TransactionDTO
+	if err := ctx.ShouldBind(txDto); err != nil {
 		res := helpers.BuildErrorResponse("Invalid Parameter", err.Error(), helpers.EmptyObject{})
 		ctx.JSON(http.StatusBadGateway, res)
 		return
@@ -43,20 +43,22 @@ func (tx *txcontroller) CreateTX(ctx *gin.Context) {
 	}
 }
 
-func (tx *txcontroller) CreateSendTX(ctx *gin.Context) {
-	var txDto dto.TransactionSendDTO
-	if err := ctx.ShouldBind(&txDto); err != nil {
+func (tx *txcontroller) CreateTXipfs(ctx *gin.Context) {
+	var propoDto *dto.ProposalDTO
+
+	if err := ctx.ShouldBind(propoDto); err != nil {
 		res := helpers.BuildErrorResponse("Invalid Parameter", err.Error(), helpers.EmptyObject{})
 		ctx.JSON(http.StatusBadGateway, res)
 		return
 	}
-	result, err := tx.TxService.CreateSendTX(txDto)
+	fmt.Print("What ups")
+	result, err := tx.TxService.CreateTXipfs(propoDto)
 	if err != nil {
 		res := helpers.BuildErrorResponse("Invalid paramerter", err.Error(), helpers.EmptyObject{})
 		ctx.JSON(http.StatusBadGateway, res)
 	} else {
 		var response helpers.Response
-		if result != "" {
+		if result {
 			response = helpers.BuildResponse(true, "Successfully", result)
 		} else {
 			response = helpers.BuildResponse(false, "Unsuccessfully", result)
@@ -65,27 +67,49 @@ func (tx *txcontroller) CreateSendTX(ctx *gin.Context) {
 	}
 }
 
-func (tx *txcontroller) CreateShareTX(ctx *gin.Context) {
-	var txDto dto.TransactionShareDTO
-	if err := ctx.ShouldBind(&txDto); err != nil {
-		res := helpers.BuildErrorResponse("Invalid Parameter", err.Error(), helpers.EmptyObject{})
-		ctx.JSON(http.StatusBadGateway, res)
-		return
-	}
-	result, err := tx.TxService.CreateShareTX(txDto)
-	if err != nil {
-		res := helpers.BuildErrorResponse("Invalid paramerter", err.Error(), helpers.EmptyObject{})
-		ctx.JSON(http.StatusBadGateway, res)
-	} else {
-		var response helpers.Response
-		if result != "" {
-			response = helpers.BuildResponse(true, "Successfully", result)
-		} else {
-			response = helpers.BuildResponse(false, "Unsuccessfully", result)
-		}
-		ctx.JSON(http.StatusOK, response)
-	}
-}
+// func (tx *txcontroller) CreateSendTX(ctx *gin.Context) {
+// 	var txDto dto.TransactionSendDTO
+// 	if err := ctx.ShouldBind(&txDto); err != nil {
+// 		res := helpers.BuildErrorResponse("Invalid Parameter", err.Error(), helpers.EmptyObject{})
+// 		ctx.JSON(http.StatusBadGateway, res)
+// 		return
+// 	}
+// 	result, err := tx.TxService.CreateSendTX(txDto)
+// 	if err != nil {
+// 		res := helpers.BuildErrorResponse("Invalid paramerter", err.Error(), helpers.EmptyObject{})
+// 		ctx.JSON(http.StatusBadGateway, res)
+// 	} else {
+// 		var response helpers.Response
+// 		if result != "" {
+// 			response = helpers.BuildResponse(true, "Successfully", result)
+// 		} else {
+// 			response = helpers.BuildResponse(false, "Unsuccessfully", result)
+// 		}
+// 		ctx.JSON(http.StatusOK, response)
+// 	}
+// }
+
+// func (tx *txcontroller) CreateShareTX(ctx *gin.Context) {
+// 	var txDto dto.TransactionShareDTO
+// 	if err := ctx.ShouldBind(&txDto); err != nil {
+// 		res := helpers.BuildErrorResponse("Invalid Parameter", err.Error(), helpers.EmptyObject{})
+// 		ctx.JSON(http.StatusBadGateway, res)
+// 		return
+// 	}
+// 	result, err := tx.TxService.CreateShareTX(txDto)
+// 	if err != nil {
+// 		res := helpers.BuildErrorResponse("Invalid paramerter", err.Error(), helpers.EmptyObject{})
+// 		ctx.JSON(http.StatusBadGateway, res)
+// 	} else {
+// 		var response helpers.Response
+// 		if result != "" {
+// 			response = helpers.BuildResponse(true, "Successfully", result)
+// 		} else {
+// 			response = helpers.BuildResponse(false, "Unsuccessfully", result)
+// 		}
+// 		ctx.JSON(http.StatusOK, response)
+// 	}
+// }
 
 func NewTxController(tx services.TxService) TxController {
 	return &txcontroller{tx}
