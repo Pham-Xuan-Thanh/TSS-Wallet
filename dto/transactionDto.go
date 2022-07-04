@@ -8,8 +8,8 @@ type TransactionInputsDTO struct {
 }
 
 type TransactionOutputsDTO struct {
-	Address string `json:"address" binding:"required"`
-	Value   int    `json:"value" binding:"required"`
+	Value      int    `json:"value" binding:"required"`
+	PubKeyHash string `json:"pub_key_hash" binding:"required"` // string hex
 }
 
 type TransactionIPFSDTO struct {
@@ -17,7 +17,9 @@ type TransactionIPFSDTO struct {
 	SignatureFile string `json:"signature" binding:"required"`     // Sign IFPS ENC
 
 	IpfsHashEnc string `json:"ifps_enc" binding:"required"`
-	PubKeyHash  string `json:"pub_key_user"` // Allow user if TX share
+	PubKeyHash  string `json:"pub_key_user" binding:"required"` // Allow user if TX share
+
+	Exp int64 `json:"exp" binding:"required"`
 }
 
 type TransactionDTO struct {
@@ -32,6 +34,10 @@ type ProposalDTO struct {
 	StorageMiningAddress string         `json:"address" binding:"required"`
 	IpfsHash             string         `json:"ipfs" binding:"required"`
 	Fee                  int            `json:"fee" binding:"required"`
+}
+
+type GetInsDTO struct {
+	Address string `json:"address" binding:"required"`
 }
 
 // type TransactionShareIPFSDTO struct {

@@ -4,11 +4,11 @@ import (
 	"encoding/hex"
 
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/dto"
+	"github.com/Pham-Xuan-Thanh/TSS-Wallet/entities"
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/repositories"
 	"github.com/thanhxeon2470/TSS_chain/blockchain"
 	"github.com/thanhxeon2470/TSS_chain/cli"
 	"github.com/thanhxeon2470/TSS_chain/utils"
-	"github.com/thanhxeon2470/TSS_chain/wallet"
 )
 
 type txservice struct {
@@ -20,6 +20,7 @@ type TxService interface {
 	CreateTXipfs(*dto.ProposalDTO) (bool, error)
 	// CreateSendTX(dto.TransactionSendDTO) (string, error)
 	// CreateShareTX(dto.TransactionShareDTO) (string, error)
+	GetTXins(*dto.GetInsDTO) (*entities.TransactionInputs, error)
 }
 
 func (txser *txservice) CreateTX(txDto *dto.TransactionDTO) (bool, error) {
@@ -37,18 +38,23 @@ func (txser *txservice) CreateTX(txDto *dto.TransactionDTO) (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		pubKey := utils.Base58Decode([]byte(txin.PubKey))
-
+		pubKey, err := hex.DecodeString(txin.PubKey)
+		if err != nil {
+			return false, err
+		}
 		tmp := blockchain.TXInput{txID, txin.Vout, signature, pubKey}
 		inputs = append(inputs, tmp)
 	}
 
-	// Import Tx inputs
+	// Import Tx outputs
 	dtoTxOuts := txDto.TxOuts
 	for _, txout := range dtoTxOuts {
-
-		tmp := blockchain.NewTXOutput(txout.Value, txout.Address)
-		outputs = append(outputs, *tmp)
+		pubKey, err := hex.DecodeString(txout.PubKeyHash)
+		if err != nil {
+			return false, err
+		}
+		tmp := blockchain.TXOutput{txout.Value, pubKey}
+		outputs = append(outputs, tmp)
 	}
 	txID, err := hex.DecodeString(txDto.TxID)
 	if err != nil {
@@ -81,12 +87,15 @@ func (txser *txservice) CreateTXipfs(propoDto *dto.ProposalDTO) (bool, error) {
 		inputs = append(inputs, tmp)
 	}
 
-	// Import Tx inputs
+	// Import Tx outputs
 	dtoTxOuts := propoDto.Tx.TxOuts
 	for _, txout := range dtoTxOuts {
-
-		tmp := blockchain.NewTXOutput(txout.Value, txout.Address)
-		outputs = append(outputs, *tmp)
+		pubKey, err := hex.DecodeString(txout.PubKeyHash)
+		if err != nil {
+			return false, err
+		}
+		tmp := blockchain.TXOutput{txout.Value, pubKey}
+		outputs = append(outputs, tmp)
 	}
 
 	// Import Tx ipfs
@@ -99,17 +108,17 @@ func (txser *txservice) CreateTXipfs(propoDto *dto.ProposalDTO) (bool, error) {
 		}
 		ipfsHashEnc, err := hex.DecodeString(txipfs.IpfsHashEnc)
 
-		var allowUsers [][]byte
-		allowUsers = append(allowUsers, wallet.HashPubKey(pubKeyOwner))
+		// var allowUsers []byte
+		// allowUsers = append(allowUsers, wallet.HashPubKey(pubKeyOwner))
+		allowUser, err := hex.DecodeString(txipfs.PubKeyHash)
 
-		if txipfs.PubKeyHash != "" {
-			allowUser, err := hex.DecodeString(txipfs.PubKeyHash)
-			if err != nil {
-				return false, err
-			}
-			allowUsers = append(allowUsers, allowUser)
-		}
-		tmp := blockchain.NewTXIpfs(pubKeyOwner, signatureFile, ipfsHashEnc, allowUsers)
+		// if txipfs.PubKeyHash != "" {
+		// 	if err != nil {
+		// 		return false, err
+		// 	}
+		// 	allowUsers = append(allowUsers, allowUser...)
+		// }
+		tmp := blockchain.NewTXIpfs(pubKeyOwner, signatureFile, ipfsHashEnc, allowUser)
 		ipfsList = append(ipfsList, *tmp)
 	}
 
@@ -132,6 +141,11 @@ func (txser *txservice) CreateTXipfs(propoDto *dto.ProposalDTO) (bool, error) {
 		return false, nil
 	}
 	return txser.TxRepositories.CreateTX(&tx)
+}
+
+func (txser *txservice) GetTXins(getTXins *dto.GetInsDTO) (*entities.TransactionInputs, error) {
+	address := getTXins.Address
+	return txser.TxRepositories.GetTXins(address)
 }
 
 // func (txser *txservice) CreateSendTX(txDto dto.TransactionSendDTO) (string, error) {

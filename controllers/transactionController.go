@@ -17,18 +17,19 @@ type txcontroller struct {
 type TxController interface {
 	CreateTX(ctx *gin.Context)
 	CreateTXipfs(ctx *gin.Context) // Create tx send file
+	GetTXins(ctx *gin.Context)
 	// CreateShareTX(ctx *gin.Context) // Tx to share file
 }
 
 func (tx *txcontroller) CreateTX(ctx *gin.Context) {
-	var txDto *dto.TransactionDTO
-	if err := ctx.ShouldBind(txDto); err != nil {
+	var txDto dto.TransactionDTO
+	if err := ctx.ShouldBind(&txDto); err != nil {
 		res := helpers.BuildErrorResponse("Invalid Parameter", err.Error(), helpers.EmptyObject{})
 		ctx.JSON(http.StatusBadGateway, res)
 		return
 	}
-	fmt.Print("What ups")
-	result, err := tx.TxService.CreateTX(txDto)
+	fmt.Print("What ups1")
+	result, err := tx.TxService.CreateTX(&txDto)
 	if err != nil {
 		res := helpers.BuildErrorResponse("Invalid paramerter", err.Error(), helpers.EmptyObject{})
 		ctx.JSON(http.StatusBadGateway, res)
@@ -44,15 +45,15 @@ func (tx *txcontroller) CreateTX(ctx *gin.Context) {
 }
 
 func (tx *txcontroller) CreateTXipfs(ctx *gin.Context) {
-	var propoDto *dto.ProposalDTO
+	var propoDto dto.ProposalDTO
 
-	if err := ctx.ShouldBind(propoDto); err != nil {
+	if err := ctx.ShouldBind(&propoDto); err != nil {
 		res := helpers.BuildErrorResponse("Invalid Parameter", err.Error(), helpers.EmptyObject{})
 		ctx.JSON(http.StatusBadGateway, res)
 		return
 	}
-	fmt.Print("What ups")
-	result, err := tx.TxService.CreateTXipfs(propoDto)
+	fmt.Print("What ups2")
+	result, err := tx.TxService.CreateTXipfs(&propoDto)
 	if err != nil {
 		res := helpers.BuildErrorResponse("Invalid paramerter", err.Error(), helpers.EmptyObject{})
 		ctx.JSON(http.StatusBadGateway, res)
@@ -63,6 +64,25 @@ func (tx *txcontroller) CreateTXipfs(ctx *gin.Context) {
 		} else {
 			response = helpers.BuildResponse(false, "Unsuccessfully", result)
 		}
+		ctx.JSON(http.StatusOK, response)
+	}
+}
+
+func (tx *txcontroller) GetTXins(ctx *gin.Context) {
+	var getInsDTO dto.GetInsDTO
+
+	if err := ctx.ShouldBind(&getInsDTO); err != nil {
+		res := helpers.BuildErrorResponse("Invalid Parameter", err.Error(), helpers.EmptyObject{})
+		ctx.JSON(http.StatusBadGateway, res)
+		return
+	}
+	fmt.Print("What ups3")
+	result, err := tx.TxService.GetTXins(&getInsDTO)
+	if err != nil {
+		res := helpers.BuildErrorResponse("Invalid TX inputs", err.Error(), helpers.EmptyObject{})
+		ctx.JSON(http.StatusBadGateway, res)
+	} else {
+		response := helpers.BuildResponse(true, "Successfully", result)
 		ctx.JSON(http.StatusOK, response)
 	}
 }

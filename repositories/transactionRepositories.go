@@ -6,11 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"os/exec"
 	"strings"
 	s "strings"
+	"time"
 
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/entities"
 	"github.com/thanhxeon2470/TSS_chain/blockchain"
@@ -26,7 +29,7 @@ type TxRepositories interface {
 	CreateProposal(*cli.Proposal) (bool, error)
 	// CreateSendTX(entities.Transaction) (string, error)
 	// CreateShareTX(entities.Transaction) (string, error)
-	GetTXins(entities.Address) (*entities.TransactionInputs, error)
+	GetTXins(addr string) (*entities.TransactionInputs, error)
 }
 
 type ipfsID struct {
@@ -88,14 +91,55 @@ func ipfsAdd(filepath string) (string, error) {
 }
 func (txrepo *txrepositories) CreateTX(tx *blockchain.Transaction) (bool, error) {
 
+	cli.SendTx(strings.Split(os.Getenv("KNOWNNODE"), "_")[0], tx)
 	// Create Transaction to Propogate on network
 	// fmt.Print("What ups")
-	cli.SendTx(strings.Split(os.Getenv("KNOWNNODE"), "_")[0], tx)
+	// tx.Sign(w.PrivateKey)
+
 	return true, nil
 }
 func (txrepo *txrepositories) CreateProposal(proposal *cli.Proposal) (bool, error) {
 	cli.SendProposal(strings.Split(os.Getenv("KNOWNNODE"), "_")[0], *proposal)
-	// return true, nil
+
+	port := os.Getenv("PORT")
+	port = fmt.Sprintf(":%s", port)
+	ln, err := net.Listen("tcp", port)
+	if err != nil {
+		log.Panic(err)
+	}
+	defer ln.Close()
+
+	deadline := time.Now().Add(time.Second * 30)
+	for {
+		conn, err := ln.Accept()
+		conn.SetDeadline(deadline)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		request, err := ioutil.ReadAll(conn)
+		if err != nil {
+			log.Panic(err)
+		}
+		command := cli.BytesToCommand(request[:12])
+		if command == "feedback" {
+			var buff bytes.Buffer
+			var payload cli.Fbproposal
+			buff.Write(request[12:])
+			dec := gob.NewDecoder(&buff)
+			err := dec.Decode(&payload)
+			if err != nil {
+				log.Panic(err)
+			}
+			if payload.Accept == true && bytes.Compare(payload.TxHash, proposal.TxHash) == 0 {
+				return true, nil
+			}
+		}
+
+		if time.Now().Unix() > deadline.Unix() {
+			return false, fmt.Errorf("Request to NODE is timeout")
+		}
+	}
 }
 
 // func (txrepo *txrepositories) CreateSendTX(tx entities.Transaction) (string, error) {
@@ -119,10 +163,10 @@ func (txrepo *txrepositories) CreateProposal(proposal *cli.Proposal) (bool, erro
 // 	// return txrepo.blkchain.Share(tx.PrivKey, tx.Reciever, tx.Amount, tx.PubKey2Share, tx.IpfsHashEnc), nil
 // }
 
-func (txrepo *txrepositories) GetTXins(addr entities.Address) (*entities.TransactionInputs, error) {
+func (txrepo *txrepositories) GetTXins(addr string) (*entities.TransactionInputs, error) {
 	result := new(entities.TransactionInputs)
 
-	rpc.SendGetTxIns(os.Getenv("SERVER_RPC"), addr.Address)
+	rpc.SendGetTxIns(os.Getenv("SERVER_RPC"), addr)
 	port := os.Getenv("PORT_LSRPC")
 	port = fmt.Sprintf(":%s", port)
 	ln, err := net.Listen("tcp", port)
@@ -130,12 +174,23 @@ func (txrepo *txrepositories) GetTXins(addr entities.Address) (*entities.Transac
 		return nil, err
 	}
 	defer ln.Close()
-
-	conn, err := ln.Accept()
-	if err != nil {
-		return nil, err
+	var buff_t []byte
+	deadline := time.Now().Add(time.Second * 30)
+	for {
+		conn, err := ln.Accept()
+		conn.SetDeadline(deadline)
+		if err != nil {
+			log.Panic(err)
+		}
+		var command string
+		buff_t, command = rpc.HandleRPCReceive(conn)
+		if command == "txins" {
+			break
+		}
+		if time.Now().Unix() > deadline.Unix() {
+			return nil, fmt.Errorf("RPC timeout")
+		}
 	}
-	buff_t := rpc.HandleRPCReceive(conn)
 	var payload rpc.Txins
 	buff := bytes.NewBuffer(buff_t)
 	dec := gob.NewDecoder(buff)
@@ -143,8 +198,15 @@ func (txrepo *txrepositories) GetTXins(addr entities.Address) (*entities.Transac
 	if err != nil {
 		return nil, err
 	}
-
-	result.TXins = payload.ValidOutputs
+	input := new(entities.Txinput)
+	for txid, infos := range payload.ValidOutputs {
+		input.TxID = txid
+		for _, info := range infos {
+			input.Vout = info[0]
+			input.Value = info[1]
+			result.TXins = append(result.TXins, *input)
+		}
+	}
 
 	return result, nil
 }

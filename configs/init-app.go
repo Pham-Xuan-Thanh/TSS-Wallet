@@ -97,6 +97,7 @@ func InitServer(chaincore cli.CLI) *Server {
 	{
 		txRouter.POST("/", txController.CreateTX)
 		txRouter.POST("/upload", txController.CreateTXipfs)
+		txRouter.POST("/gettxin", txController.GetTXins)
 		// txRouter.POST("/share", txController.CreateTXipfs)
 	}
 

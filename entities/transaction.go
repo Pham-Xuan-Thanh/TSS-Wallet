@@ -9,7 +9,12 @@ type Transaction struct {
 	IpfsHashEnc  string
 	FileHash     string
 }
+type Txinput struct {
+	TxID  string `json:"tx_id"`
+	Vout  int    `json:"vout"`
+	Value int    `json:"value"`
+}
 
 type TransactionInputs struct {
-	TXins map[string][][2]int `json:"tx_ins"`
+	TXins []Txinput `json:"tx_ins"`
 }
