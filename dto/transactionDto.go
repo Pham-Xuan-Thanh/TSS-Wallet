@@ -16,7 +16,7 @@ type TransactionIPFSDTO struct {
 	PubKeyOwner   string `json:"pub_key_owner" binding:"required"` // Pubkey to Verify
 	SignatureFile string `json:"signature" binding:"required"`     // Sign IFPS ENC
 
-	IpfsHashEnc string `json:"ifps_enc" binding:"required"`
+	IpfsHashEnc string `json:"ipfs_enc" binding:"required"`
 	PubKeyHash  string `json:"pub_key_user" binding:"required"` // Allow user if TX share
 
 	Exp int64 `json:"exp" binding:"required"`

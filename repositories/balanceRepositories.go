@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
@@ -27,29 +28,39 @@ func (b *balancerepositories) GetBalance(addrTSS string) (*entities.Balance, err
 	rpc.SendGetBlance(os.Getenv("SERVER_RPC"), addrTSS)
 	port := os.Getenv("PORT_LSRPC")
 	port = fmt.Sprintf(":%s", port)
-	ln, err := net.Listen("tcp", port)
+	var conf net.ListenConfig
+	conf.KeepAlive = time.Second * 5
+	ln, err := conf.Listen(context.Background(), "tcp", port)
 	if err != nil {
 		log.Panic(err)
 	}
 	defer ln.Close()
 	var buff_t []byte
-	deadline := time.Now().Add(time.Second * 30)
+	timeNow := time.Now().Unix()
 	for {
 		conn, err := ln.Accept()
-		conn.SetDeadline(deadline)
+		defer conn.Close()
+		// if ne , ok := err.(net.Error); ok && ne.Timeout() {
+		// 	fmt.Println("iqejfojwoeijjeiwf" , err)
+		// 	break
+		// }
 		if err != nil {
 			log.Panic(err)
+			break
 		}
 		var command string
 		buff_t, command = rpc.HandleRPCReceive(conn)
 		if command == "balance" {
+			conn.Close()
 			break
 		}
-		if time.Now().Unix() > deadline.Unix() {
-			return nil, fmt.Errorf("RPC timeout")
+		if time.Now().Unix()-timeNow > 4 {
+			fmt.Println("Connection time out")
+			return nil, fmt.Errorf("Connection time out")
 		}
 	}
 
+	fmt.Println("Connection balaaaab")
 	var payload rpc.Balance
 	buff := bytes.NewBuffer(buff_t)
 	dec := gob.NewDecoder(buff)
@@ -79,17 +90,18 @@ func (b *balancerepositories) FindIPFSHash(ipfsHashENC string) (*entities.AllowU
 	rpc.SendFindIPFS(os.Getenv("SERVER_RPC"), encBytes)
 	port := os.Getenv("PORT_LSRPC")
 	port = fmt.Sprintf(":%s", port)
-	ln, err := net.Listen("tcp", port)
+	var conf net.ListenConfig
+	conf.KeepAlive = time.Second * 5
+	ln, err := conf.Listen(context.Background(), "tcp", port)
 	if err != nil {
 		log.Panic(err)
 	}
 	defer ln.Close()
 
 	var buff_t []byte
-	deadline := time.Now().Add(time.Second * 30)
 	for {
 		conn, err := ln.Accept()
-		conn.SetDeadline(deadline)
+		defer conn.Close()
 		if err != nil {
 			log.Panic(err)
 		}
@@ -97,9 +109,6 @@ func (b *balancerepositories) FindIPFSHash(ipfsHashENC string) (*entities.AllowU
 		buff_t, command = rpc.HandleRPCReceive(conn)
 		if command == "ipfs" {
 			break
-		}
-		if time.Now().Unix() > deadline.Unix() {
-			return nil, fmt.Errorf("RPC timeout")
 		}
 	}
 	var payload rpc.Ipfs

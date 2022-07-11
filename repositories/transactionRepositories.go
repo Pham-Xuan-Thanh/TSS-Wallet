@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"encoding/json"
 	"errors"
@@ -103,23 +104,23 @@ func (txrepo *txrepositories) CreateProposal(proposal *cli.Proposal) (bool, erro
 
 	port := os.Getenv("PORT")
 	port = fmt.Sprintf(":%s", port)
-	ln, err := net.Listen("tcp", port)
+	var conf net.ListenConfig
+	conf.KeepAlive = time.Second * 5
+	ln, err := conf.Listen(context.Background(), "tcp", port)
 	if err != nil {
-		log.Panic(err)
+		return false, err
 	}
 	defer ln.Close()
 
-	deadline := time.Now().Add(time.Second * 30)
 	for {
 		conn, err := ln.Accept()
-		conn.SetDeadline(deadline)
 		if err != nil {
-			log.Panic(err)
+			return false, err
 		}
 
 		request, err := ioutil.ReadAll(conn)
 		if err != nil {
-			log.Panic(err)
+			return false, err
 		}
 		command := cli.BytesToCommand(request[:12])
 		if command == "feedback" {
@@ -129,15 +130,11 @@ func (txrepo *txrepositories) CreateProposal(proposal *cli.Proposal) (bool, erro
 			dec := gob.NewDecoder(&buff)
 			err := dec.Decode(&payload)
 			if err != nil {
-				log.Panic(err)
+				return false, err
 			}
 			if payload.Accept == true && bytes.Compare(payload.TxHash, proposal.TxHash) == 0 {
 				return true, nil
 			}
-		}
-
-		if time.Now().Unix() > deadline.Unix() {
-			return false, fmt.Errorf("Request to NODE is timeout")
 		}
 	}
 }
@@ -169,26 +166,24 @@ func (txrepo *txrepositories) GetTXins(addr string) (*entities.TransactionInputs
 	rpc.SendGetTxIns(os.Getenv("SERVER_RPC"), addr)
 	port := os.Getenv("PORT_LSRPC")
 	port = fmt.Sprintf(":%s", port)
-	ln, err := net.Listen("tcp", port)
+	var conf net.ListenConfig
+	conf.KeepAlive = time.Second * 5
+	ln, err := conf.Listen(context.Background(), "tcp", port)
 	if err != nil {
 		return nil, err
 	}
 	defer ln.Close()
 	var buff_t []byte
-	deadline := time.Now().Add(time.Second * 30)
 	for {
 		conn, err := ln.Accept()
-		conn.SetDeadline(deadline)
 		if err != nil {
 			log.Panic(err)
 		}
 		var command string
 		buff_t, command = rpc.HandleRPCReceive(conn)
 		if command == "txins" {
+			ln.Close()
 			break
-		}
-		if time.Now().Unix() > deadline.Unix() {
-			return nil, fmt.Errorf("RPC timeout")
 		}
 	}
 	var payload rpc.Txins

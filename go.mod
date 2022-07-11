@@ -6,11 +6,10 @@ require (
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-gonic/gin v1.8.0
 	github.com/joho/godotenv v1.4.0
-	github.com/mashingan/smapping v0.1.14
 	github.com/swaggo/files v0.0.0-20210815190702-a29dd2bc99b2
 	github.com/swaggo/gin-swagger v1.4.3
 	github.com/swaggo/swag v1.8.2
-	github.com/thanhxeon2470/TSS_chain v0.0.0-20220601084436-37278eeceacf
+	github.com/thanhxeon2470/TSS_chain v0.0.0-20220704091011-c0027a1f8531
 	gorm.io/driver/sqlite v1.3.2
 	gorm.io/gorm v1.23.5
 )
