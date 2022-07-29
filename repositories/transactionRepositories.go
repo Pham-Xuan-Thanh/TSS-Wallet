@@ -10,16 +10,16 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"net/rpc"
 	"os"
 	"os/exec"
 	"strings"
-	s "strings"
 	"time"
 
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/entities"
 	"github.com/thanhxeon2470/TSS_chain/blockchain"
 	"github.com/thanhxeon2470/TSS_chain/cli"
-	"github.com/thanhxeon2470/TSS_chain/rpc"
+	r "github.com/thanhxeon2470/TSS_chain/rpc"
 )
 
 type txrepositories struct {
@@ -74,8 +74,8 @@ func ipfsIsRunning() bool {
 
 func getFileHash(stout []byte) string {
 	stoutstr := string(stout)
-	fhphase := s.Split(stoutstr, "\n")[0]
-	fh := s.Split(fhphase, " ")[1]
+	fhphase := strings.Split(stoutstr, "\n")[0]
+	fh := strings.Split(fhphase, " ")[1]
 	return fh
 }
 func ipfsAdd(filepath string) (string, error) {
@@ -163,33 +163,24 @@ func (txrepo *txrepositories) CreateProposal(proposal *cli.Proposal) (bool, erro
 func (txrepo *txrepositories) GetTXins(addr string) (*entities.TransactionInputs, error) {
 	result := new(entities.TransactionInputs)
 
-	rpc.SendGetTxIns(os.Getenv("SERVER_RPC"), addr)
-	port := os.Getenv("PORT_LSRPC")
-	port = fmt.Sprintf(":%s", port)
-	var conf net.ListenConfig
-	conf.KeepAlive = time.Second * 5
-	ln, err := conf.Listen(context.Background(), "tcp", port)
+	req, err := r.GobEncode(r.Gettxins{addr})
 	if err != nil {
 		return nil, err
 	}
-	defer ln.Close()
-	var buff_t []byte
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			log.Panic(err)
-		}
-		var command string
-		buff_t, command = rpc.HandleRPCReceive(conn)
-		if command == "txins" {
-			ln.Close()
-			break
-		}
+	args := &r.Args{req}
+	res := &r.Result{}
+	serverAddress := os.Getenv(("SERVER_RPC"))
+	client, err := rpc.DialHTTP("tcp", serverAddress)
+	if err != nil {
+		log.Fatal("dialing:", err)
 	}
-	var payload rpc.Txins
-	buff := bytes.NewBuffer(buff_t)
-	dec := gob.NewDecoder(buff)
-	err = dec.Decode(&payload)
+
+	err = client.Call("RPC.GetTxIns", args, res)
+	if err != nil {
+		log.Fatal("Call RPC:", err)
+	}
+	var payload r.Txins
+	err = r.GobDecode(res.Res, &payload)
 	if err != nil {
 		return nil, err
 	}

@@ -1,18 +1,15 @@
 package repositories
 
 import (
-	"bytes"
-	"context"
-	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	"log"
-	"net"
+	"net/rpc"
 	"os"
 	"time"
 
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/entities"
-	"github.com/thanhxeon2470/TSS_chain/rpc"
+	r "github.com/thanhxeon2470/TSS_chain/rpc"
 )
 
 type balancerepositories struct {
@@ -25,46 +22,26 @@ type BalanceRepositories interface {
 
 func (b *balancerepositories) GetBalance(addrTSS string) (*entities.Balance, error) {
 	result := new(entities.Balance)
-	rpc.SendGetBlance(os.Getenv("SERVER_RPC"), addrTSS)
-	port := os.Getenv("PORT_LSRPC")
-	port = fmt.Sprintf(":%s", port)
-	var conf net.ListenConfig
-	conf.KeepAlive = time.Second * 5
-	ln, err := conf.Listen(context.Background(), "tcp", port)
+	req, err := r.GobEncode(r.Getbalance{addrTSS})
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
-	defer ln.Close()
-	var buff_t []byte
-	timeNow := time.Now().Unix()
-	for {
-		conn, err := ln.Accept()
-		defer conn.Close()
-		// if ne , ok := err.(net.Error); ok && ne.Timeout() {
-		// 	fmt.Println("iqejfojwoeijjeiwf" , err)
-		// 	break
-		// }
-		if err != nil {
-			log.Panic(err)
-			break
-		}
-		var command string
-		buff_t, command = rpc.HandleRPCReceive(conn)
-		if command == "balance" {
-			conn.Close()
-			break
-		}
-		if time.Now().Unix()-timeNow > 4 {
-			fmt.Println("Connection time out")
-			return nil, fmt.Errorf("Connection time out")
-		}
+	args := &r.Args{req}
+	res := &r.Result{}
+
+	serverAddress := os.Getenv(("SERVER_RPC"))
+	client, err := rpc.DialHTTP("tcp", serverAddress)
+	if err != nil {
+		log.Fatal("dialing:", err)
 	}
 
-	fmt.Println("Connection balaaaab")
-	var payload rpc.Balance
-	buff := bytes.NewBuffer(buff_t)
-	dec := gob.NewDecoder(buff)
-	err = dec.Decode(&payload)
+	err = client.Call("RPC.GetBlance", args, res)
+	if err != nil {
+		log.Fatal("Call RPC:", err)
+	}
+
+	var payload r.Balance
+	err = r.GobDecode(res.Res, &payload)
 	if err != nil {
 		return nil, err
 	}
@@ -87,34 +64,27 @@ func (b *balancerepositories) FindIPFSHash(ipfsHashENC string) (*entities.AllowU
 	if err != nil {
 		return nil, err
 	}
-	rpc.SendFindIPFS(os.Getenv("SERVER_RPC"), encBytes)
-	port := os.Getenv("PORT_LSRPC")
-	port = fmt.Sprintf(":%s", port)
-	var conf net.ListenConfig
-	conf.KeepAlive = time.Second * 5
-	ln, err := conf.Listen(context.Background(), "tcp", port)
-	if err != nil {
-		log.Panic(err)
-	}
-	defer ln.Close()
 
-	var buff_t []byte
-	for {
-		conn, err := ln.Accept()
-		defer conn.Close()
-		if err != nil {
-			log.Panic(err)
-		}
-		var command string
-		buff_t, command = rpc.HandleRPCReceive(conn)
-		if command == "ipfs" {
-			break
-		}
+	req, err := r.GobEncode(r.Findipfs{encBytes})
+	if err != nil {
+		return nil, err
 	}
-	var payload rpc.Ipfs
-	buff := bytes.NewBuffer(buff_t)
-	dec := gob.NewDecoder(buff)
-	err = dec.Decode(&payload)
+	args := &r.Args{req}
+	res := &r.Result{}
+
+	serverAddress := os.Getenv(("SERVER_RPC"))
+	client, err := rpc.DialHTTP("tcp", serverAddress)
+	if err != nil {
+		log.Fatal("dialing:", err)
+	}
+
+	err = client.Call("RPC.FindIPFS", args, res)
+	if err != nil {
+		log.Fatal("Call RPC:", err)
+	}
+
+	var payload r.Ipfs
+	err = r.GobDecode(res.Res, &payload)
 	if err != nil {
 		return nil, err
 	}
