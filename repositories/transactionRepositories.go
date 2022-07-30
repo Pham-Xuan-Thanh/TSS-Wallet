@@ -1,24 +1,17 @@
 package repositories
 
 import (
-	"bytes"
-	"context"
-	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"net"
 	"net/rpc"
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/entities"
 	"github.com/thanhxeon2470/TSS_chain/blockchain"
-	"github.com/thanhxeon2470/TSS_chain/cli"
 	r "github.com/thanhxeon2470/TSS_chain/rpc"
 )
 
@@ -27,7 +20,7 @@ type txrepositories struct {
 
 type TxRepositories interface {
 	CreateTX(*blockchain.Transaction) (bool, error)
-	CreateProposal(*cli.Proposal) (bool, error)
+	CreateProposal(*r.Proposal) (bool, error)
 	// CreateSendTX(entities.Transaction) (string, error)
 	// CreateShareTX(entities.Transaction) (string, error)
 	GetTXins(addr string) (*entities.TransactionInputs, error)
@@ -91,52 +84,47 @@ func ipfsAdd(filepath string) (string, error) {
 	return getFileHash(stdout), nil
 }
 func (txrepo *txrepositories) CreateTX(tx *blockchain.Transaction) (bool, error) {
+	req := tx.Serialize()
+	args := &r.Args{req}
+	res := &r.Result{}
 
-	cli.SendTx(strings.Split(os.Getenv("KNOWNNODE"), "_")[0], tx)
+	serverAddress := os.Getenv(("SERVER_RPC"))
+	client, err := rpc.DialHTTP("tcp", serverAddress)
+	if err != nil {
+		return false, err
+	}
+
+	err = client.Call("RPC.SendTx", args, res)
+	if err != nil {
+		return false, err
+	}
+
 	// Create Transaction to Propogate on network
 	// fmt.Print("What ups")
 	// tx.Sign(w.PrivateKey)
 
 	return true, nil
 }
-func (txrepo *txrepositories) CreateProposal(proposal *cli.Proposal) (bool, error) {
-	cli.SendProposal(strings.Split(os.Getenv("KNOWNNODE"), "_")[0], *proposal)
+func (txrepo *txrepositories) CreateProposal(proposal *r.Proposal) (bool, error) {
 
-	port := os.Getenv("PORT")
-	port = fmt.Sprintf(":%s", port)
-	var conf net.ListenConfig
-	conf.KeepAlive = time.Second * 5
-	ln, err := conf.Listen(context.Background(), "tcp", port)
+	req, err := r.GobEncode(proposal)
 	if err != nil {
 		return false, err
 	}
-	defer ln.Close()
+	args := &r.Args{req}
+	res := &r.Result{}
 
-	for {
-		conn, err := ln.Accept()
-		if err != nil {
-			return false, err
-		}
-
-		request, err := ioutil.ReadAll(conn)
-		if err != nil {
-			return false, err
-		}
-		command := cli.BytesToCommand(request[:12])
-		if command == "feedback" {
-			var buff bytes.Buffer
-			var payload cli.Fbproposal
-			buff.Write(request[12:])
-			dec := gob.NewDecoder(&buff)
-			err := dec.Decode(&payload)
-			if err != nil {
-				return false, err
-			}
-			if payload.Accept == true && bytes.Compare(payload.TxHash, proposal.TxHash) == 0 {
-				return true, nil
-			}
-		}
+	serverAddress := os.Getenv(("SERVER_RPC"))
+	client, err := rpc.DialHTTP("tcp", serverAddress)
+	if err != nil {
+		return false, err
 	}
+
+	err = client.Call("RPC.SendProposal", args, res)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // func (txrepo *txrepositories) CreateSendTX(tx entities.Transaction) (string, error) {

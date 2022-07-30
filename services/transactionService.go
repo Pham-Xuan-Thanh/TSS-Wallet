@@ -9,7 +9,7 @@ import (
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/entities"
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/repositories"
 	"github.com/thanhxeon2470/TSS_chain/blockchain"
-	"github.com/thanhxeon2470/TSS_chain/cli"
+	"github.com/thanhxeon2470/TSS_chain/rpc"
 )
 
 type txservice struct {
@@ -153,7 +153,7 @@ func (txser *txservice) CreateTXipfs(propoDto *dto.ProposalDTO) (bool, error) {
 	// if err != nil {
 	// 	return false, err
 	// }
-	proposal := cli.Proposal{TxHash: txID, StorageMiningAddress: address, FileHash: []byte(propoDto.IpfsHash), Amount: propoDto.Fee}
+	proposal := rpc.Proposal{TxHash: txID, StorageMiningAddress: address, FileHash: []byte(propoDto.IpfsHash), Amount: propoDto.Fee}
 	fmt.Println("Cli proposa thu 2 ", proposal)
 	res, err := txser.TxRepositories.CreateProposal(&proposal)
 	// if err != nil {
