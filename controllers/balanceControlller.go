@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/dto"
@@ -40,11 +41,14 @@ func (b *balancecontroller) GetBalance(ctx *gin.Context) {
 func (b *balancecontroller) FindIPFSHash(ctx *gin.Context) {
 	var ipfsHash dto.IPFSHASH
 	err := ctx.ShouldBind(&ipfsHash)
+	fmt.Print("whattt... ", ipfsHash.IPFSHash)
 	if err != nil {
+		fmt.Print("whattt... ", ipfsHash.IPFSHash)
 		res := helpers.BuildErrorResponse("Invalid Parameter", err.Error(), helpers.EmptyObject{})
 		ctx.JSON(http.StatusBadGateway, res)
 		return
 	}
+	fmt.Print("whattt... ", ipfsHash.IPFSHash)
 	result, err := b.BalanceService.FindIPFSHash(ipfsHash.IPFSHash)
 	if err != nil {
 		res := helpers.BuildErrorResponse("Invalid IPFS hash", err.Error(), helpers.EmptyObject{})

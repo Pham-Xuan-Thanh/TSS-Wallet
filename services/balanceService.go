@@ -16,14 +16,13 @@ type BalanceService interface {
 }
 
 func (b *balanceservice) GetBalance(balanceGet dto.AddressDTO) (*entities.Balance, error) {
-	balanceAddr := entities.Address{balanceGet.Address}
 
 	// err := smapping.FillStruct(&balanceAddr, smapping.MapFields(&balanceGet))
 	// if err != nil {
 	// 	return nil, err
 	// }
 
-	return b.BalanceRepo.GetBalance(balanceAddr)
+	return b.BalanceRepo.GetBalance(balanceGet.Address)
 }
 
 func (b *balanceservice) FindIPFSHash(ipfsHash string) (*entities.AllowUsers, error) {

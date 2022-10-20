@@ -4,20 +4,26 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
+	"net/rpc"
 	"os"
 	"os/exec"
-	s "strings"
+	"strings"
 
 	"github.com/Pham-Xuan-Thanh/TSS-Wallet/entities"
-	"github.com/thanhxeon2470/TSS_chain/cli"
+	"github.com/thanhxeon2470/TSS_chain/blockchain"
+	r "github.com/thanhxeon2470/TSS_chain/rpc"
 )
 
 type txrepositories struct {
-	blkchain cli.CLI
 }
 
 type TxRepositories interface {
-	CreateTX(entities.Transaction) (bool, error)
+	CreateTX(*blockchain.Transaction) (bool, error)
+	CreateProposal(*r.Proposal) (bool, error)
+	// CreateSendTX(entities.Transaction) (string, error)
+	// CreateShareTX(entities.Transaction) (string, error)
+	GetTXins(addr string) (*entities.TransactionInputs, error)
 }
 
 type ipfsID struct {
@@ -61,8 +67,8 @@ func ipfsIsRunning() bool {
 
 func getFileHash(stout []byte) string {
 	stoutstr := string(stout)
-	fhphase := s.Split(stoutstr, "\n")[0]
-	fh := s.Split(fhphase, " ")[1]
+	fhphase := strings.Split(stoutstr, "\n")[0]
+	fh := strings.Split(fhphase, " ")[1]
 	return fh
 }
 func ipfsAdd(filepath string) (string, error) {
@@ -77,23 +83,108 @@ func ipfsAdd(filepath string) (string, error) {
 	}
 	return getFileHash(stdout), nil
 }
-func (txrepo *txrepositories) CreateTX(tx entities.Transaction) (bool, error) {
-	//Check file exist??
-	if isExist, err := fileExists(tx.FilePath); err != nil || !isExist {
-		return isExist, err
-	}
+func (txrepo *txrepositories) CreateTX(tx *blockchain.Transaction) (bool, error) {
+	req := tx.Serialize()
+	args := &r.Args{req}
+	res := &r.Result{}
 
-	// Add file to ipfs
-	fh, err := ipfsAdd(tx.FilePath)
+	serverAddress := os.Getenv(("SERVER_RPC"))
+	client, err := rpc.DialHTTP("tcp", serverAddress)
 	if err != nil {
 		return false, err
 	}
-	tx.FileHash = fh
+
+	err = client.Call("RPC.SendTx", args, res)
+	if err != nil {
+		return false, err
+	}
+
 	// Create Transaction to Propogate on network
+	// fmt.Print("What ups")
+	// tx.Sign(w.PrivateKey)
 
-	return txrepo.blkchain.SendProposal(tx.PrivKey, tx.Reciever, tx.Amount, tx.AllowAddress, tx.FileHash), nil
-
+	return true, nil
 }
-func NewTxRepositories(blkchain cli.CLI) TxRepositories {
-	return &txrepositories{blkchain: blkchain}
+func (txrepo *txrepositories) CreateProposal(proposal *r.Proposal) (bool, error) {
+
+	req, err := r.GobEncode(proposal)
+	if err != nil {
+		return false, err
+	}
+	args := &r.Args{req}
+	res := &r.Result{}
+
+	serverAddress := os.Getenv(("SERVER_RPC"))
+	client, err := rpc.DialHTTP("tcp", serverAddress)
+	if err != nil {
+		return false, err
+	}
+
+	err = client.Call("RPC.SendProposal", args, res)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// func (txrepo *txrepositories) CreateSendTX(tx entities.Transaction) (string, error) {
+// 	//Check file exist??
+// 	if isExist, err := fileExists(tx.FilePath); err != nil || !isExist {
+// 		return "", err
+// 	}
+
+// 	// Add file to ipfs
+// 	fh, err := ipfsAdd(tx.FilePath)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	tx.FileHash = fh
+// 	// Create Transaction to Propogate on network
+// 	// return txrepo.blkchain.SendProposal(tx.PrivKey, tx.Reciever, tx.Amount, tx.FileHash), nil
+// }
+// func (txrepo *txrepositories) CreateShareTX(tx entities.Transaction) (string, error) {
+
+// 	// Create Transaction to Propogate on network
+// 	// return txrepo.blkchain.Share(tx.PrivKey, tx.Reciever, tx.Amount, tx.PubKey2Share, tx.IpfsHashEnc), nil
+// }
+
+func (txrepo *txrepositories) GetTXins(addr string) (*entities.TransactionInputs, error) {
+	result := new(entities.TransactionInputs)
+
+	req, err := r.GobEncode(r.Gettxins{addr})
+	if err != nil {
+		return nil, err
+	}
+	args := &r.Args{req}
+	res := &r.Result{}
+	serverAddress := os.Getenv(("SERVER_RPC"))
+	client, err := rpc.DialHTTP("tcp", serverAddress)
+	if err != nil {
+		log.Fatal("dialing:", err)
+	}
+
+	err = client.Call("RPC.GetTxIns", args, res)
+	if err != nil {
+		log.Fatal("Call RPC:", err)
+	}
+	var payload r.Txins
+	err = r.GobDecode(res.Res, &payload)
+	if err != nil {
+		return nil, err
+	}
+	input := new(entities.Txinput)
+	for txid, infos := range payload.ValidOutputs {
+		input.TxID = txid
+		for _, info := range infos {
+			input.Vout = info[0]
+			input.Value = info[1]
+			result.TXins = append(result.TXins, *input)
+		}
+	}
+
+	return result, nil
+}
+
+func NewTxRepositories() TxRepositories {
+	return &txrepositories{}
 }

@@ -5,5 +5,5 @@ type AddressDTO struct {
 }
 
 type IPFSHASH struct {
-	IPFSHash string `json:"ipfshash" binding:"required"`
+	IPFSHash string `json:"ipfshash_enc" binding:"required"`
 }
